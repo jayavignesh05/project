@@ -2,22 +2,7 @@ const express = require("express");
 const router = express.Router();
 const promisePool = require("../../db");
 const verifyToken = require("../middleware/verifyToken");
-const multer = require('multer'); // Import multer
-const path = require('path'); // Import path module
-
-// Multer storage configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Ensure this directory exists in your backend project root
-    cb(null, 'uploads/profile_pics/'); 
-  },
-  filename: (req, file, cb) => {
-    // Use originalname and append timestamp to avoid conflicts
-    cb(null, Date.now() + '-' + file.originalname);
-  },
-});
-
-const upload = multer({ storage: storage });
+const jwt = require('jsonwebtoken');
 
 const showProfile = async (req, res) => {
   const userId = req.userId;
@@ -29,7 +14,7 @@ const showProfile = async (req, res) => {
           a.id AS address_id, a.address, a.door_no, 
           a.street, a.area, a.city, a.pincode, a.countries_id, a.state_id,
           g.gender_name,
-          g.id,
+        g.id AS gender_id,
           
           cs.name AS current_status_name,
         
@@ -65,7 +50,7 @@ const showProfile = async (req, res) => {
       email: results[0].email_id,
       contact_no: results[0].contact_no,
       gender: results[0].gender_name,
-      gender_id: results[0].id,
+      gender_id: results[0].gender_id,
 
       date_of_birth: results[0].date_of_birth,
       current_status_id: results[0].current_status_id,
@@ -93,7 +78,6 @@ const showProfile = async (req, res) => {
 
     res.status(200).json(userProfile);
   } catch (error) {
-    console.error("Profile data fetch error:", error);
     res.status(500).json({ error: "Database query failed" });
   }
 };
@@ -178,7 +162,6 @@ const updateProfile = async (req, res) => {
       .json({ message: "Profile and addresses updated successfully." });
   } catch (error) {
     await connection.rollback();
-    console.error("Profile update transaction error:", error);
     res
       .status(500)
       .json({ error: "Database query failed during profile update." });
@@ -211,7 +194,6 @@ const insertProfile = async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    // Step 1: Insert user details
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     const userInsertSql =
@@ -228,7 +210,6 @@ const insertProfile = async (req, res) => {
     ]);
     const newUserId = userResult.insertId;
 
-    // Step 2: Insert addresses if they exist
     if (addresses && Array.isArray(addresses)) {
       for (const address of addresses) {
         const addressInsertSql = `
@@ -255,7 +236,6 @@ const insertProfile = async (req, res) => {
       .json({ message: "Profile created successfully.", userId: newUserId });
   } catch (error) {
     await connection.rollback();
-    console.error("Profile insert transaction error:", error);
     res
       .status(500)
       .json({ error: "Database query failed during profile creation." });
@@ -272,7 +252,7 @@ const getEducation = async (req, res) => {
         SELECT 
             E.id,
             E.graduation_date,
-            d.name AS degree_name,
+            d.name AS name,
             E.institute_id,
             i.name AS institute_name,
             E.location AS institute_location,
@@ -282,7 +262,7 @@ const getEducation = async (req, res) => {
         LEFT JOIN 
             institutes AS i ON E.institute_id = i.id
         LEFT JOIN
-                    degrees AS d ON E.degree_id = d.id
+            degrees AS d ON E.degree_id = d.id
 
         WHERE 
             E.user_id = ?
@@ -294,14 +274,13 @@ const getEducation = async (req, res) => {
 
     res.status(200).json(results);
   } catch (error) {
-    console.error("Education GET Error:", error);
     res.status(500).json({ error: "Database query failed" });
   }
 };
 
 const insertEducation = async (req, res) => {
   const userId = req.userId;
-  const {
+  let {
     institute_name,
     institute_location,
     institute_id,
@@ -309,6 +288,9 @@ const insertEducation = async (req, res) => {
     graduation_date,
     location_id,
   } = req.body;
+
+  // Frontend sends degree name as 'name'
+  const degree_name = req.body.name;
 
   if (!degree_id || !graduation_date) {
     return res.status(400).json({
@@ -320,47 +302,16 @@ const insertEducation = async (req, res) => {
   try {
     let instituteId = institute_id;
 
-    // If no institute_id provided, require institute_name and institute_location and find/insert institute
-    if (!instituteId) {
-      if (!institute_name || !institute_location) {
-        return res.status(400).json({
-          message:
-            "Either institute_id or both institute_name and institute_location are required.",
-        });
-      }
-
-      const instituteSelectSql =
-        "SELECT id FROM institutes WHERE name = ? AND location = ?";
-      const [instituteResult] = await promisePool.query(instituteSelectSql, [
-        institute_name,
-        institute_location,
-      ]);
-
-      if (instituteResult.length === 0) {
-        const instituteInsertSql = `
-          INSERT INTO institutes (name, location)
-          VALUES (?, ?)
-        `;
-        const [newInstituteResult] = await promisePool.query(
-          instituteInsertSql,
-          [institute_name, institute_location]
-        );
-        instituteId = newInstituteResult.insertId;
-      } else {
-        instituteId = instituteResult[0].id;
-      }
-    }
-
     const sql = `
-      INSERT INTO user_education (user_id, institute_id, degree_id, graduation_date, location_id)
+      INSERT INTO user_education (user_id, institute_id, degree_id, graduation_date, location)
       VALUES (?, ?, ?, ?, ?);
     `;
     const [result] = await promisePool.query(sql, [
       userId,
-      instituteId,
+      institute_id,
       degree_id,
-      graduation_date,
-      location_id || null,
+      new Date(graduation_date).toISOString().slice(0, 10),
+      institute_location,
     ]);
 
     res.status(201).json({
@@ -368,7 +319,7 @@ const insertEducation = async (req, res) => {
       educationId: result.insertId,
     });
   } catch (error) {
-    console.error("Education INSERT Error:", error);
+    console.error("Error inserting education:", error);
     res.status(500).json({ error: "Database query failed" });
   }
 };
@@ -377,22 +328,16 @@ const updateEducation = async (req, res) => {
   const userId = req.userId;
   const { id, institute_id, degree_id, graduation_date, location } = req.body;
 
-  if (!id || !institute_id || !degree_id || !graduation_date || !location) {
-    return res
-      .status(400)
-      .json({ message: "Required education fields are missing for update." });
-  }
-
   try {
     const sql = `
       UPDATE user_education 
-      SET institute_id = ?, degree_id = ?, graduation_date = ?,location=?
+      SET institute_id = ?, degree_id = ?, graduation_date = ?, location = ?
       WHERE id = ? AND user_id = ?;
     `;
     await promisePool.query(sql, [
       institute_id,
       degree_id,
-      graduation_date,
+      new Date(graduation_date).toISOString().slice(0, 10),
       location,
       id,
       userId,
@@ -402,10 +347,10 @@ const updateEducation = async (req, res) => {
       .status(200)
       .json({ message: "Education details updated successfully." });
   } catch (error) {
-    console.error("Education UPDATE Error:", error);
+    console.error("Error updating education:", error);
     res
       .status(500)
-      .json({ error: "Database query failed during education update." });
+      .json({ error: "Database query failed during education update.", details: error.message });
   }
 };
 
@@ -439,7 +384,6 @@ const getExperience = async (req, res) => {
 
     res.status(200).json(results);
   } catch (error) {
-    console.error("Experience GET Error:", error);
     res.status(500).json({ error: "Database query failed" });
   }
 };
@@ -447,64 +391,32 @@ const getExperience = async (req, res) => {
 const insertExperience = async (req, res) => {
   const userId = req.userId;
   const {
-    company_name,
-    company_location,
     company_id,
-    job_title,
-    relieving_data,
-    location_id,
+    designation_id,
+    joining_date,
+    relieving_date,
+    company_location,
   } = req.body;
 
-  if (!job_title || !relieving_data) {
+  if (!designation_id || !joining_date) {
     return res.status(400).json({
       message:
-        "Required experience fields (job_title, relieving_data) are missing.",
+        "Required experience fields (designation_id, joining_date) are missing.",
     });
   }
 
   try {
-    let companyId = company_id;
-
-    if (!companyId) {
-      if (!company_name || !company_location) {
-        return res.status(400).json({
-          message:
-            "Either company_id or both company_name and company_location are required.",
-        });
-      }
-
-      const companySelectSql =
-        "SELECT id FROM companies WHERE name = ? AND location = ?";
-      const [companyResult] = await promisePool.query(companySelectSql, [
-        company_name,
-        company_location,
-      ]);
-
-      if (companyResult.length === 0) {
-        const companyInsertSql = `
-          INSERT INTO companies (name, location)
-          VALUES (?, ?)
-        `;
-        const [newCompanyResult] = await promisePool.query(companyInsertSql, [
-          company_name,
-          company_location,
-        ]);
-        companyId = newCompanyResult.insertId;
-      } else {
-        companyId = companyResult[0].id;
-      }
-    }
-
     const sql = `
-      INSERT INTO user_experience (user_id, company_id, job_title, relieving_data, location_id)
-      VALUES (?, ?, ?, ?, ?);
+      INSERT INTO user_experience (user_id, company_id, designation_id, joining_date, relieving_date, company_location)
+      VALUES (?, ?, ?, ?, ?, ?);
     `;
     const [result] = await promisePool.query(sql, [
       userId,
-      companyId,
-      job_title,
-      relieving_data,
-      location_id || null,
+      company_id,
+      designation_id,
+      joining_date,
+      relieving_date || null,
+      company_location,
     ]);
 
     res.status(201).json({
@@ -512,16 +424,15 @@ const insertExperience = async (req, res) => {
       experienceId: result.insertId,
     });
   } catch (error) {
-    console.error("Experience INSERT Error:", error);
-    res.status(500).json({ error: "Database query failed" });
+    res.status(500).json({ error: "Database query failed", details: error.message });
   }
 };
 
 const updateExperience = async (req, res) => {
   const userId = req.userId;
-  const { id, company_id, job_title, relieving_data, location } = req.body;
+  const { id, company_id, designation_id, joining_date, relieving_date, company_location } = req.body;
 
-  if (!id || !company_id || !job_title || !relieving_data || !location) {
+  if (!id || !company_id || !designation_id || !joining_date) {
     return res
       .status(400)
       .json({ message: "Required experience fields are missing for update." });
@@ -530,14 +441,15 @@ const updateExperience = async (req, res) => {
   try {
     const sql = `
       UPDATE user_experience
-      SET company_id = ?, job_title = ?, relieving_data = ?, location = ?
+      SET company_id = ?, designation_id = ?, joining_date = ?, relieving_date = ?, company_location = ?
       WHERE id = ? AND user_id = ?;
     `;
     await promisePool.query(sql, [
       company_id,
-      job_title,
-      relieving_data,
-      location,
+      designation_id,
+      new Date(joining_date).toISOString().slice(0, 10),
+      relieving_date ? new Date(relieving_date).toISOString().slice(0, 10) : null,
+      company_location,
       id,
       userId,
     ]);
@@ -546,85 +458,89 @@ const updateExperience = async (req, res) => {
       .status(200)
       .json({ message: "Experience details updated successfully." });
   } catch (error) {
-    console.error("Experience UPDATE Error:", error);
     res
       .status(500)
       .json({ error: "Database query failed during experience update." });
   }
 };
 
-const getProfilePic = async (req, res) => {
-  const userId = req.userId;
-
+const addProfilePic = async (req, res) => {
   try {
-    const sql = `
-      SELECT 
-        profile_pic
-      FROM 
-        user_profile_pics
-      WHERE 
-        user_id = ?;
-    `;
+    const { token, mime_type, file_data } = req.body;
 
-    const [results] = await promisePool.query(sql, [userId]);
+    if (!token) return res.status(401).json({ error: "Token is required" });
 
-    if (results.length === 0) {
-      return res.status(404).json({ message: "Profile picture not found." });
-    }
+    jwt.verify(token, 'ZXERE235SSF', async (err, decoded) => {
+      if (err) {
+        return res.status(403).json({ error: "Invalid or expired token" });
+      }
 
-    res.status(200).json({ profile_pic: results[0].profile_pic });
-  } catch (error) {
-    console.error("Get profile picture error:", error);
+      const user_id = decoded.id;
+
+      if (!file_data || !mime_type) {
+        return res
+          .status(400)
+          .json({ error: "file_data and mime_type are required" });
+      }
+
+      const buffer = Buffer.from(file_data, "base64");
+
+      await promisePool.query(
+          `INSERT INTO user_profile_pics (user_id, mimetype, profile_pic)
+           VALUES (?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             mimetype = VALUES(mimetype),
+             profile_pic = VALUES(profile_pic)`,
+          [user_id, mime_type, buffer]
+        );
+
+      res.json({ message: "Profile picture updated successfully!" });
+    });
+  } catch (err) {
     res
       .status(500)
-      .json({ error: "Database query failed to get profile picture." });
+      .json({ error: "Failed to save profile picture", details: err.message });
   }
 };
 
-const updateProfilePic = async (req, res) => {
-  const userId = req.userId;
-
-  if (!req.file) {
-    return res.status(400).json({ message: "No profile picture file uploaded." });
-  }
-
-  const profilePicPath = req.file.path;
-
+const getProfilePic = async (req, res) => {
   try {
-    // Check if a profile picture already exists for the user
-    const selectSql = "SELECT id FROM user_profile_pics WHERE user_id = ?";
-    const [rows] = await promisePool.query(selectSql, [userId]);
+    const { token } = req.body;
 
-    if (rows.length > 0) {
-      // Update existing entry
-      const updateSql = "UPDATE user_profile_pics SET profile_pic = ? WHERE user_id = ?";
-      await promisePool.query(updateSql, [profilePicPath, userId]);
-    } else {
-      // Insert new entry
-      const insertSql = "INSERT INTO user_profile_pics (user_id, profile_pic) VALUES (?, ?)";
-      await promisePool.query(insertSql, [userId, profilePicPath]);
-    }
+    if (!token) return res.status(401).json({ error: "Token is required" });
 
-    res.status(200).json({
-      message: "Profile picture updated successfully.",
-      filePath: profilePicPath,
+    jwt.verify(token, 'ZXERE235SSF', async (err, decoded) => {
+      if (err) {
+        return res.status(403).json({ error: "Invalid or expired token" });
+      }
+
+      const user_id = decoded.id;
+
+      const [rows] = await promisePool.query("SELECT profile_pic, mimetype FROM user_profile_pics WHERE user_id = ?", [user_id]);
+
+      if (rows.length === 0) return res.status(404).json({ error: "No image found" });
+
+      res.set("Content-Type", rows[0].mimetype);
+      res.send(rows[0].profile_pic);
     });
-  } catch (error) {
-    console.error("Update profile picture error:", error);
-    res.status(500).json({ error: "Database query failed to update profile picture." });
+  } catch (err) {
+    res.status(500).json({
+      error: "Failed to fetch profile picture",
+      details: err.message,
+    });
   }
 };
 
 router.post("/show", verifyToken, showProfile);
 router.put("/update", verifyToken, updateProfile);
 router.post("/create", insertProfile);
-router.get("/education", verifyToken, getEducation);
-router.post("/education", verifyToken, insertEducation);
-router.put("/education", verifyToken, updateEducation);
-router.get("/experience", verifyToken, getExperience);
-router.post("/experience", verifyToken, insertExperience);
-router.put("/experience", verifyToken, updateExperience);
-router.get("/profile-pic", verifyToken, getProfilePic);
-router.post("/profile-pic", verifyToken, upload.single('profile_pic'), updateProfilePic);
+router.post("/geteducation", verifyToken, getEducation);
+router.post("/neweducation", verifyToken, insertEducation);
+router.put("/updateeducation", verifyToken, updateEducation);
+router.post("/experience", verifyToken, getExperience);
+router.post("/newexperience", verifyToken, insertExperience);
+router.put("/updateexperience", verifyToken, updateExperience);
+router.post("/addProfilePic", addProfilePic);
+router.post("/getProfilePic", getProfilePic);
 
 module.exports = router;

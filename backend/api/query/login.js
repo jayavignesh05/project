@@ -27,7 +27,6 @@ router.post('/register', async (req, res) => {
         });
 
     } catch (err) {
-        console.error("server error:", err);
     }
 });
 
@@ -64,8 +63,6 @@ router.post('/login', async (req, res) => {
         }
 
     } catch (err) {
-       console.error("Login error:", err);
-
     }
 });
 
@@ -74,7 +71,6 @@ router.get('/', async (req, res) => { // This route is now /data
         const [genders] = await promisePool.query("SELECT id, gender_name FROM gender");
         res.status(200).json(genders);
     } catch (err) {
-        console.error("Data fetch error:", err);
         res.status(500).json({ message: "Failed to fetch data." });
     }
 });

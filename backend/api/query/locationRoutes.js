@@ -9,38 +9,29 @@ router.get("/countries", async (req, res) => {
     const [results] = await promisePool.query(sql);
     res.status(200).json(results);
   } catch (error) {
-    
     res.status(500).json({ error: "Database query failed" });
   }
 });
 
-/// Get states by country ID
-// 1. Inga 'async' add pannunga
 router.post("/states", async (req, res) => {
-  try { // 2. 'try' block start pannunga
+  try {
     const { country_id } = req.body;
 
-    // Oru chinna improvement: country_id illana error anupunga
     if (!country_id) {
         return res.status(400).json({ error: "country_id is required" });
     }
 
     const query = "SELECT id, name FROM states WHERE country_id = ? ORDER BY name ASC";
 
-    // 3. Ippadi 'await' panni data va vaangunga
-    //    'results' la unga data array irukum
     const [results, fields] = await promisePool.query(query, [country_id]);
 
-    // 4. 'results.length' vachi check pannunga (results[0].length illa)
     if (results.length === 0) {
       return res.status(404).json({ message: "No states found for this country" });
     }
 
-    // 5. 'results' ah direct ah anupunga (results[0] illa)
     res.status(200).json(results);
 
-  } catch (err) { // 6. Error vantha, inga 'catch' pannidalam
-   
+  } catch (err) {
     return res.status(500).json({ error: "Database query failed" });
   }
 });
@@ -52,7 +43,6 @@ router.get("/genders", async (req, res) => {
     const [results] = await promisePool.query(sql);
     res.status(200).json(results);
   } catch (error) {
-    
     res.status(500).json({ error: "Database query failed" });
   }
 });
@@ -64,7 +54,6 @@ router.get("/currentstatus", async (req, res) => {
     const [results] = await promisePool.query(sql);
     res.status(200).json(results);
   } catch (error) {
-    console.error("Error fetching current statuses:", error);
     res.status(500).json({ error: "Database query failed" });
   }
 });
@@ -76,7 +65,6 @@ router.get("/institutes", async (req, res) => {
     const [results] = await promisePool.query(sql);
     res.status(200).json(results);
   } catch (error) {
-  
     res.status(500).json({ error: "Database query failed" });
   }
 });
@@ -97,7 +85,6 @@ router.post("/newinstitutes", async (req, res) => {
       instituteId: result.insertId,
     });
   } catch (error) {
-   
     res.status(500).json({ error: "Database query failed" });
   }
 });
@@ -109,7 +96,6 @@ router.get("/degrees", async (req, res) => {
     const [results] = await promisePool.query(sql);
     res.status(200).json(results);
   } catch (error) {
-    console.error("Error fetching degrees:", error);
     res.status(500).json({ error: "Database query failed" });
   }
 });
@@ -128,7 +114,6 @@ router.post("/newdegrees", async (req, res) => {
     await promisePool.query(sql, [name]);
     res.status(200).json({ message: "Degree updated successfully" });
   } catch (error) {
-    console.error("Error updating degree:", error);
     res.status(500).json({ error: "Database query failed" });
   }
 });
@@ -140,7 +125,6 @@ router.get("/companies", async (req, res) => {
     const [results] = await promisePool.query(sql);
     res.status(200).json(results);
   } catch (error) {
-    console.error("Error fetching companies:", error);
     res.status(500).json({ error: "Database query failed" });
   }
 });
@@ -161,7 +145,6 @@ router.post("/newcompanies", async (req, res) => {
       companyId: result.insertId,
     });
   } catch (error) {
-    console.error("Error inserting company:", error);
     res.status(500).json({ error: "Database query failed" });
   }
 });
@@ -173,7 +156,6 @@ router.get("/designations", async (req, res) => {
     const [results] = await promisePool.query(sql);
     res.status(200).json(results);
   } catch (error) {
-    console.error("Error fetching designations:", error);
     res.status(500).json({ error: "Database query failed" });
   }
 });
@@ -194,7 +176,6 @@ router.post("/newdesignations", async (req, res) => {
       designationId: result.insertId,
     });
   } catch (error) {
-    console.error("Error inserting designation:", error);
     res.status(500).json({ error: "Database query failed" });
   }
 });

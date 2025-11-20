@@ -17,7 +17,7 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar }) {
     const fetchSidebarData = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:8000/api/side/sidebar"
+          "http://localhost:7000/api/side/sidebar"
         );
         setAppVersion(response.data);
       } catch (error) {

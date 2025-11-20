@@ -1,24 +1,92 @@
-import React, { useState, useEffect } from "react";
+/* eslint-disable no-empty */
+import React, { useState, useEffect, useRef } from "react";
 import "./ProfilePage.css";
-import { MdOutlineEdit } from "react-icons/md";
 import profileImage from "../assets/profilepic.png";
 import dayjs from "dayjs";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { MdClear, MdCheck } from "react-icons/md";
+
+// Import Sub-components
+import ProfilePicCard from "../components/profile/ProfilePicCard";
+
+import ContactCard from "../components/profile/ContactCard";
+
+import EducationCard from "../components/profile/EducationCard";
+
+import ExperienceCard from "../components/profile/ExperienceCard";
+
+import HeaderCard from "../components/profile/HeaderCard";
+
+import PersonalInfoCard from "../components/profile/PersonalInfoCard";
 
 const ProfilePage = () => {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [experienceData, setExperienceData] = useState([]);
+  const [educationData, setEducationData] = useState([]);
   const [error, setError] = useState(null);
-
-  const [editingCard, setEditingCard] = useState(null); // <-- Ithu thaan namma state
+  const [editingCard, setEditingCard] = useState(null);
   const [formData, setFormData] = useState({});
-  const [genders, setGenders] = useState([]);
-  const [currentStatuses, setCurrentStatuses] = useState([]);
-  const [countries, setCountries] = useState([]);
-  const [states, setStates] = useState([]);
+  const [profilePic, setProfilePic] = useState(profileImage);
+  const [shouldScroll, setShouldScroll] = useState(false);
+
+  const educationsContainerRef = useRef(null);
+  const addressesContainerRef = useRef(null);
+  const experiencesContainerRef = useRef(null);
+
+  const [dropdownData, setDropdownData] = useState({
+    genders: [],
+    currentStatuses: [],
+    countries: [],
+    states: [],
+    companies: [],
+    designations: [],
+    degrees: [],
+    institutes: [],
+  });
+
+  useEffect(() => {
+    if (
+      editingCard === "personalInfo" &&
+      shouldScroll &&
+      addressesContainerRef.current?.lastElementChild
+    ) {
+      addressesContainerRef.current.lastElementChild.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      setShouldScroll(false);
+    }
+  }, [formData.addresses?.length, editingCard, shouldScroll]);
+
+  useEffect(() => {
+    if (
+      editingCard === "education" &&
+      shouldScroll &&
+      educationsContainerRef.current?.lastElementChild
+    ) {
+      educationsContainerRef.current.lastElementChild.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      setShouldScroll(false);
+    }
+  }, [formData.educations?.length, editingCard, shouldScroll]);
+
+  useEffect(() => {
+    if (
+      editingCard === "experience" &&
+      shouldScroll &&
+      experiencesContainerRef.current?.lastElementChild
+    ) {
+      experiencesContainerRef.current.lastElementChild.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      setShouldScroll(false);
+    }
+  }, [formData.experiences?.length, editingCard, shouldScroll]);
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -30,18 +98,27 @@ const ProfilePage = () => {
       }
 
       try {
-        const [profileRes, genderRes, statusRes, countryRes] =
-          await Promise.all([
-            axios.post("http://localhost:8000/api/profile/show", { token }),
-            axios.get("http://localhost:8000/api/location/genders"),
-            axios.get("http://localhost:8000/api/location/currentstatus"),
-            axios.get("http://localhost:8000/api/location/countries"),
-          ]);
+        const [profileRes, experienceRes, educationRes] = await Promise.all([
+          axios.post("http://localhost:7000/api/profile/show", { token }),
+          axios.post("http://localhost:7000/api/profile/experience", { token }),
+          axios.post("http://localhost:7000/api/profile/geteducation", {
+            token,
+          }),
+        ]);
 
         setProfileData(profileRes.data);
-        setGenders(genderRes.data);
-        setCurrentStatuses(statusRes.data);
-        setCountries(countryRes.data);
+        setExperienceData(experienceRes.data);
+        setEducationData(educationRes.data);
+
+        try {
+          const profilePicRes = await axios.post(
+            "http://localhost:7000/api/profile/getProfilePic",
+            { token },
+            { responseType: "blob" }
+          );
+          const imageUrl = URL.createObjectURL(profilePicRes.data);
+          setProfilePic(imageUrl);
+        } catch { }
       } catch (e) {
         const errorMessage = e.response?.data?.error || e.message;
         setError(errorMessage);
@@ -53,16 +130,56 @@ const ProfilePage = () => {
     fetchProfileData();
   }, []);
 
+  const fetchDropdownData = async (types) => {
+    const requests = {
+      genders: () => axios.get("http://localhost:7000/api/location/genders"),
+      currentStatuses: () =>
+        axios.get("http://localhost:7000/api/location/currentstatus"),
+      countries: () =>
+        axios.get("http://localhost:7000/api/location/countries"),
+      companies: () =>
+        axios.get("http://localhost:7000/api/location/companies"),
+      designations: () =>
+        axios.get("http://localhost:7000/api/location/designations"),
+      degrees: () => axios.get("http://localhost:7000/api/location/degrees"),
+      institutes: () =>
+        axios.get("http://localhost:7000/api/location/institutes"),
+    };
+
+    try {
+      const promises = types.map((type) => requests[type]());
+      const responses = await Promise.all(promises);
+      const newDropdownData = {};
+      responses.forEach((res, index) => {
+        newDropdownData[types[index]] = res.data;
+      });
+      setDropdownData((prev) => ({ ...prev, ...newDropdownData }));
+    } catch {
+      toast.error("Failed to load editing data.");
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     return dayjs(dateString).format("DD/MM/YYYY");
   };
 
-  const handleEditClick = (cardName) => {
+  const handleEditClick = async (cardName) => {
     setEditingCard(cardName);
+    setShouldScroll(false);
+
+    if (cardName === "header") await fetchDropdownData(["currentStatuses"]);
+    else if (cardName === "personalInfo")
+      await fetchDropdownData(["genders", "countries"]);
+    else if (cardName === "education")
+      await fetchDropdownData(["degrees", "institutes"]);
+    else if (cardName === "experience")
+      await fetchDropdownData(["companies", "designations"]);
+
     const dob = profileData.date_of_birth
       ? dayjs(profileData.date_of_birth).format("YYYY-MM-DD")
       : "";
+
     setFormData({
       ...profileData,
       email_id: profileData.email,
@@ -75,18 +192,59 @@ const ProfilePage = () => {
       })),
     });
 
-    if (
-      cardName === "personalInfo" &&
-      profileData.addresses &&
-      profileData.addresses.length > 0
-    ) {
+    if (cardName === "experience") {
+      setFormData((prev) => ({
+        ...prev,
+        experiences: JSON.parse(JSON.stringify(experienceData)),
+      }));
+    }
+
+    if (cardName === "education") {
+      setFormData((prev) => ({
+        ...prev,
+        educations: JSON.parse(JSON.stringify(educationData)),
+      }));
+    }
+
+    if (cardName === "personalInfo" && profileData.addresses?.length > 0) {
       fetchStates(profileData.addresses[0].countries_id);
     }
   };
 
   const handleCancel = () => {
-    setEditingCard(null); // <-- Ithu page ah normal aakidum
+    setEditingCard(null);
     setFormData({});
+    setShouldScroll(false);
+  };
+
+  const handleAddAddress = () => {
+    setFormData((prev) => ({
+      ...prev,
+      addresses: [
+        ...prev.addresses,
+        { label: "New Address", countries_id: "", state_id: "" },
+      ],
+    }));
+    setShouldScroll(true);
+  };
+
+  const handleAddExperience = () => {
+    setFormData((prev) => ({
+      ...prev,
+      experiences: [
+        ...prev.experiences,
+        { joining_date: "", relieving_date: null },
+      ],
+    }));
+    setShouldScroll(true);
+  };
+
+  const handleAddEducation = () => {
+    setFormData((prev) => ({
+      ...prev,
+      educations: [...prev.educations, { graduation_date: "" }],
+    }));
+    setShouldScroll(true);
   };
 
   const handleInputChange = (e) => {
@@ -94,43 +252,19 @@ const ProfilePage = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = async () => {
-    const token = localStorage.getItem("token");
-    try {
-      const response = await axios.put(
-        "http://localhost:8000/api/profile/update",
-        { ...formData, token }
-      );
-
-      const profileRes = await axios.post(
-        "http://localhost:8000/api/profile/show",
-        { token }
-      );
-      setProfileData(profileRes.data);
-
-      toast.success(response.data.message || "Profile updated successfully!");
-      setEditingCard(null); // <-- Ithu page ah normal aakidum
-    } catch (err) {
-      const errorMessage =
-        err.response?.data?.error || "Failed to update profile.";
-      toast.error(errorMessage);
-    }
-  };
-
   const fetchStates = async (countryId) => {
     if (!countryId) {
-      setStates([]);
+      setDropdownData((prev) => ({ ...prev, states: [] }));
       return;
     }
     try {
       const response = await axios.post(
-        "http://localhost:8000/api/location/states",
+        "http://localhost:7000/api/location/states",
         { country_id: countryId }
       );
-      setStates(response.data);
-    } catch (error) {
-      console.error("Failed to fetch states", error);
-      setStates([]);
+      setDropdownData((prev) => ({ ...prev, states: response.data }));
+    } catch {
+      setDropdownData((prev) => ({ ...prev, states: [] }));
     }
   };
 
@@ -139,9 +273,168 @@ const ProfilePage = () => {
     const updatedAddresses = [...formData.addresses];
     updatedAddresses[index] = { ...updatedAddresses[index], [name]: value };
     setFormData((prev) => ({ ...prev, addresses: updatedAddresses }));
+    if (name === "countries_id") fetchStates(value);
+  };
 
-    if (name === "countries_id") {
-      fetchStates(value);
+  const handleExperienceInputChange = (index, e) => {
+    const { name, value, list } = e.target;
+    const updatedExperiences = [...formData.experiences];
+    const exp = { ...updatedExperiences[index] };
+    exp[name] = value;
+
+    if (list) {
+      const option = Array.from(list.options).find(
+        (opt) => opt.value === value
+      );
+      const idFieldName =
+        name === "designation_name" ? "designation_id" : "company_id";
+      if (option) exp[idFieldName] = option.dataset.id;
+      else delete exp[idFieldName];
+    }
+    updatedExperiences[index] = exp;
+    setFormData((prev) => ({ ...prev, experiences: updatedExperiences }));
+  };
+
+  const handleEducationInputChange = (index, e) => {
+    const { name, value } = e.target;
+    const list = e.target.list;
+    const updatedEducations = [...formData.educations];
+    const edu = { ...updatedEducations[index], [name]: value };
+
+    if (list) {
+      const option = Array.from(list.options).find(
+        (opt) => opt.value === value
+      );
+      const idFieldName = name === "name" ? "degree_id" : "institute_id";
+      if (option) edu[idFieldName] = option.dataset.id;
+      else delete edu[idFieldName];
+    }
+    updatedEducations[index] = edu;
+    setFormData((prev) => ({ ...prev, educations: updatedEducations }));
+  };
+
+  const handleSave = async () => {
+    if (editingCard === "experience") {
+      await handleExperienceSave();
+      return;
+    }
+    if (editingCard === "education") {
+      await handleEducationSave();
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    try {
+      const response = await axios.put(
+        "http://localhost:7000/api/profile/update",
+        {
+          ...formData,
+          token,
+          addresses: formData.addresses.map((addr) => ({
+            address_id: addr.address_id,
+            label: addr.label,
+            door_no: addr.door_no,
+            street: addr.street,
+            area: addr.area,
+            city: addr.city,
+            pincode: addr.pincode,
+            countries_id: addr.countries_id,
+            state_id: addr.state_id,
+          })),
+        }
+      );
+
+      const profileRes = await axios.post(
+        "http://localhost:7000/api/profile/show",
+        { token }
+      );
+      setProfileData(profileRes.data);
+      toast.success(response.data.message || "Profile updated successfully!");
+      setEditingCard(null);
+    } catch (err) {
+      const errorMessage =
+        err.response?.data?.error || "Failed to update profile.";
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleExperienceSave = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      for (const exp of formData.experiences) {
+        const url = exp.id
+          ? "http://localhost:7000/api/profile/updateexperience"
+          : "http://localhost:7000/api/profile/newexperience";
+        const method = exp.id ? axios.put : axios.post;
+        await method(url, { ...exp, token });
+      }
+      const experienceRes = await axios.post(
+        "http://localhost:7000/api/profile/experience",
+        { token }
+      );
+      setExperienceData(experienceRes.data);
+      toast.success("Work experience updated successfully!");
+      setEditingCard(null);
+    } catch (err) {
+      const errorMessage =
+        err.response?.data?.error || "Failed to update experience.";
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleEducationSave = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      const updatedEducations = await Promise.all(
+        formData.educations.map(async (edu) => {
+          let degreeId = edu.degree_id;
+          let instituteId = edu.institute_id;
+
+          if (!degreeId && edu.name) {
+            const response = await axios.post(
+              "http://localhost:7000/api/location/newdegrees",
+              { name: edu.name }
+            );
+            degreeId = response.data.degreeId;
+          }
+          if (!instituteId && edu.institute_name) {
+            const response = await axios.post(
+              "http://localhost:7000/api/location/newinstitutes",
+              { name: edu.institute_name }
+            );
+            instituteId = response.data.instituteId;
+          }
+          return { ...edu, degree_id: degreeId, institute_id: instituteId };
+        })
+      );
+
+      for (const edu of updatedEducations) {
+        const { institute_location, ...restOfEdu } = edu;
+        if (edu.id) {
+          await axios.put("http://localhost:7000/api/profile/updateeducation", {
+            ...restOfEdu,
+            location: institute_location,
+            token,
+          });
+        } else {
+          await axios.post("http://localhost:7000/api/profile/neweducation", {
+            ...edu,
+            token,
+            institute_id: edu.institute_id,
+          });
+        }
+      }
+      const educationRes = await axios.post(
+        "http://localhost:7000/api/profile/geteducation",
+        { token }
+      );
+      setEducationData(educationRes.data);
+      toast.success("Education details updated successfully!");
+      setEditingCard(null);
+    } catch (err) {
+      const errorMessage =
+        err.response?.data?.error || "Failed to update education.";
+      toast.error(errorMessage);
     }
   };
 
@@ -151,376 +444,84 @@ const ProfilePage = () => {
     return <div className="loading-error-message">No profile data found.</div>;
 
   return (
-    <>
-      {/* ====================================================================
-        CHANGE 1: Inga 'editing-active' nu oru class add pannirukom.
-        editingCard la value iruntha, intha class add aagum.
-        ====================================================================
-      */}
-      <div
-        className={`profile-page-wrapper ${
-          editingCard ? "editing-active" : ""
-        }`}
-      >
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-        />
-        <div className="profile-grid-container">
-          <div className="left-column">
-            <div className="grid-card profile-pic-card">
-              <div className="profile-pic">
-                <img src={profileImage} alt="Profile" />
-              </div>
-            </div>
-
-            {/* ====================================================================
-              CHANGE 2: 'contact-card' kooda 'is-editing' class add pannirukom.
-              ====================================================================
-            */}
-            <div
-              className={`grid-card contact-card ${
-                editingCard === "contact" ? "is-editing" : ""
-              }`}
-            >
-              <h3>Contact</h3>
-              {editingCard === "contact" ? (
-                <>
-                  <div className="form-group">
-                    <label>Email</label>
-                    <input
-                      type="email"
-                      name="email_id"
-                      value={formData.email_id || ""}
-                      onChange={handleInputChange}
-                      className="form-control"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Contact No</label>
-                    <input
-                      type="text"
-                      name="contact_no"
-                      value={formData.contact_no || ""}
-                      onChange={handleInputChange}
-                      className="form-control"
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="contact-item">
-                    <span>📧</span>
-                    <span>{profileData.email}</span>
-                  </div>
-                  <div className="contact-item">
-                    <span>📞</span>
-                    <span>{profileData.contact_no}</span>
-                  </div>
-                </>
-              )}
-              <div className="header-actions">
-                {editingCard === "contact" ? (
-                  <div className="edit-controls">
-                    <button onClick={handleSave} className="save-btn">
-                      <MdCheck />
-                    </button>
-                    <button onClick={handleCancel} className="cancel-btn">
-                      <MdClear />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => handleEditClick("contact")}
-                    className="edit-profile-btn"
-                  >
-                    <MdOutlineEdit />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="grid-card education-card">
-              <h3>Education</h3>
-              <p>No education data available.</p>
-            </div>
-          </div>
-
-          <div className="right-column">
-            {/* ====================================================================
-              CHANGE 3: 'header-card' kooda 'is-editing' class add pannirukom.
-              ====================================================================
-            */}
-            <div
-              className={`grid-card header-card ${
-                editingCard === "header" ? "is-editing" : ""
-              }`}
-            >
-              {editingCard === "header" ? (
-                <>
-                  <div className="form-group">
-                    <label>First Name</label>
-                    <input
-                      type="text"
-                      name="first_name"
-                      value={formData.first_name || ""}
-                      onChange={handleInputChange}
-                      className="form-control"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Last Name</label>
-                    <input
-                      type="text"
-                      name="last_name"
-                      value={formData.last_name || ""}
-                      onChange={handleInputChange}
-                      className="form-control"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Current Status</label>
-                    <select
-                      name="current_status_id"
-                      value={formData.current_status_id || ""}
-                      onChange={handleInputChange}
-                      className="form-control"
-                    >
-                      <option value="">Select Status</option>
-                      {currentStatuses.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <h1>
-                    {profileData.first_name} {profileData.last_name}
-                  </h1>
-                  <p>{profileData.current_status_name || "N/A"}</p>
-                </>
-              )}
-              <div className="header-actions">
-                {editingCard === "header" ? (
-                  <div className="edit-controls">
-                    <button onClick={handleSave} className="save-btn">
-                      <MdCheck />
-                    </button>
-                    <button onClick={handleCancel} className="cancel-btn">
-                      <MdClear />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => handleEditClick("header")}
-                    className="edit-profile-btn"
-                  >
-                    <MdOutlineEdit />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* ====================================================================
-              CHANGE 4: 'profile-summary-card' kooda 'is-editing' class add pannirukom.
-              ====================================================================
-            */}
-            <div
-              className={`grid-card profile-summary-card ${
-                editingCard === "personalInfo" ? "is-editing" : ""
-              }`}
-            >
-              <h3>Personal Information</h3>
-              {editingCard === "personalInfo" ? (
-                <>
-                  <div className="form-group">
-                    <label>Gender</label>
-                    <select
-                      name="gender_id"
-                      value={formData.gender_id || ""}
-                      onChange={handleInputChange}
-                      className="form-control"
-                    >
-                      <option value="">Select Gender</option>
-                      {genders.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {g.gender_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Date of Birth</label>
-                    <input
-                      type="date"
-                      name="date_of_birth"
-                      value={formData.date_of_birth || ""}
-                      onChange={handleInputChange}
-                      className="form-control"
-                    />
-                  </div>
-                  <hr className="form-divider" />
-                  <div className="address-edit-header">
-                    <h4>Addresses</h4>
-                  </div>
-                  {formData.addresses &&
-                    formData.addresses.map((addr, index) => (
-                      <div
-                        key={addr.address_id || `new-${index}`}
-                        className="address-form-group"
-                      >
-                        <div className="form-group">
-                          <label>Door No</label>
-                          <input
-                            type="text"
-                            name="door_no"
-                            value={addr.door_no || ""}
-                            onChange={(e) => handleAddressInputChange(index, e)}
-                            className="form-control"
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Street</label>
-                          <input
-                            type="text"
-                            name="street"
-                            value={addr.street || ""}
-                            onChange={(e) => handleAddressInputChange(index, e)}
-                            className="form-control"
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Area</label>
-                          <input
-                            type="text"
-                            name="area"
-                            value={addr.area || ""}
-                            onChange={(e) => handleAddressInputChange(index, e)}
-                            className="form-control"
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>City</label>
-                          <input
-                            type="text"
-                            name="city"
-                            value={addr.city || ""}
-                            onChange={(e) => handleAddressInputChange(index, e)}
-                            className="form-control"
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Pincode</label>
-                          <input
-                            type="text"
-                            name="pincode"
-                            value={addr.pincode || ""}
-                            onChange={(e) => handleAddressInputChange(index, e)}
-                            className="form-control"
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Country</label>
-                          <select
-                            name="countries_id"
-                            value={addr.countries_id || ""}
-                            onChange={(e) => handleAddressInputChange(index, e)}
-                            className="form-control"
-                          >
-                            <option value="">Select Country</option>
-                            {countries.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="form-group">
-                          <label>State</label>
-                          <select
-                            name="state_id"
-                            value={addr.state_id || ""}
-                            onChange={(e) => handleAddressInputChange(index, e)}
-                            className="form-control"
-                            disabled={!addr.countries_id}
-                          >
-                            <option value="">Select State</option>
-                            {states.map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {s.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    ))}
-                  <div className="header-actions">
-                    {/* This is intentionally left here to place the buttons at the top right */}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p>
-                    <strong>Gender:</strong> {profileData.gender || "N/A"}
-                  </p>
-                  <p>
-                    <strong>Date of Birth:</strong>{" "}
-                    {formatDate(profileData.date_of_birth)}
-                  </p>
-                  <div className="address-list-title">Addresses:</div>
-                  {profileData.addresses &&
-                  profileData.addresses.length > 0 ? (
-                    profileData.addresses.map((addr) => (
-                      <div key={addr.address_id} className="address-item">
-                        <div>
-                          {addr.door_no}, {addr.street}
-                        </div>
-                        <div>
-                          {addr.area}, {addr.city} - {addr.pincode}
-                        </div>
-                        <div>
-                          {addr.state_name}, {addr.country_name}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p>No addresses found.</p>
-                  )}
-                </>
-              )}
-              <div className="header-actions">
-                {editingCard === "personalInfo" ? (
-                  <div className="edit-controls">
-                    <button onClick={handleSave} className="save-btn">
-                      <MdCheck />
-                    </button>
-                    <button onClick={handleCancel} className="cancel-btn">
-                      <MdClear />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => handleEditClick("personalInfo")}
-                    className="edit-profile-btn"
-                  >
-                    <MdOutlineEdit />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="grid-card experience-card">
-              <h3>Experience</h3>
-              <p>No work experience data available.</p>
-            </div>
-          </div>
+    <div
+      className={`profile-page-wrapper ${editingCard ? "editing-active" : ""}`}
+    >
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+      />
+      <div className="profile-grid-container">
+        <div className="left-column">
+          <ProfilePicCard
+            profilePic={profilePic}
+            setProfilePic={setProfilePic}
+            defaultImage={profileImage}
+          />
+          <ContactCard
+            isEditing={editingCard === "contact"}
+            profileData={profileData}
+            formData={formData}
+            handleInputChange={handleInputChange}
+            onEdit={() => handleEditClick("contact")}
+            onSave={handleSave}
+            onCancel={handleCancel}
+          />
+          <EducationCard
+            isEditing={editingCard === "education"}
+            educationData={educationData}
+            formData={formData}
+            dropdownData={dropdownData}
+            handleEducationInputChange={handleEducationInputChange}
+            onEdit={() => handleEditClick("education")}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            onAddEducation={handleAddEducation}
+            containerRef={educationsContainerRef}
+          />
+        </div>
+        <div className="right-column">
+          <HeaderCard
+            isEditing={editingCard === "header"}
+            profileData={profileData}
+            formData={formData}
+            dropdownData={dropdownData}
+            handleInputChange={handleInputChange}
+            onEdit={() => handleEditClick("header")}
+            onSave={handleSave}
+            onCancel={handleCancel}
+          />
+          <PersonalInfoCard
+            isEditing={editingCard === "personalInfo"}
+            profileData={profileData}
+            formData={formData}
+            dropdownData={dropdownData}
+            handleInputChange={handleInputChange}
+            handleAddressInputChange={handleAddressInputChange}
+            onEdit={() => handleEditClick("personalInfo")}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            onAddAddress={handleAddAddress}
+            formatDate={formatDate}
+            containerRef={addressesContainerRef}
+          />
+          <ExperienceCard
+            isEditing={editingCard === "experience"}
+            experienceData={experienceData}
+            formData={formData}
+            dropdownData={dropdownData}
+            handleExperienceInputChange={handleExperienceInputChange}
+            onEdit={() => handleEditClick("experience")}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            onAddExperience={handleAddExperience}
+            formatDate={formatDate}
+            containerRef={experiencesContainerRef}
+          />
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

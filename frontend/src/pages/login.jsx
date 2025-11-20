@@ -37,7 +37,7 @@ function Login() {
 
     try {
       const response = await axios.post(
-        "http://localhost:8000/api/login/login",
+        "http://localhost:7000/api/login/login",
         {
           email_id: email,
           password: password,
@@ -76,7 +76,7 @@ function Login() {
 
     try {
       const response = await axios.post(
-        "http://localhost:8000/api/login/register",
+        "http://localhost:7000/api/login/register",
         registrationData
       );
 
@@ -97,7 +97,7 @@ function Login() {
   useEffect(() => {
     const fetchGenders = async () => {
       try {
-        const response = await axios.get("http://localhost:8000/data");
+        const response = await axios.get("http://localhost:7000/api/location/genders");
         setGenders(response.data);
       } catch (error) {
         console.error("Failed to fetch genders:", error);
