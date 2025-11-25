@@ -5,7 +5,7 @@ router.use('/login', require('./login'));
 router.use('/side',require('./sidebar'));
 router.use('/profile', require('./profileRoutes'));
 router.use('/location', require('./locationRoutes'));
-
+router.use('/courses', require('./courseRoutes'));
 console.log("API router loaded.");
 
 module.exports = router;

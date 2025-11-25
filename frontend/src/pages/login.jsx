@@ -20,6 +20,7 @@ function Login() {
 
   const [activeTab, setActiveTab] = useState("login");
   const navigate = useNavigate();
+  const base_api = "http://localhost:7000/api";
 
   const handleTabChange = (tab) => {
     setFirstName("");
@@ -42,13 +43,10 @@ function Login() {
     e.preventDefault();
 
     try {
-      const response = await axios.post(
-        "http://localhost:7000/api/login/login",
-        {
-          email_id: email,
-          password: password,
-        }
-      );
+      const response = await axios.post(`${base_api}/login/login`, {
+        email_id: email,
+        password: password,
+      });
 
       const data = response.data;
 
@@ -81,10 +79,7 @@ function Login() {
     };
 
     try {
-      const response = await axios.post(
-        "http://localhost:7000/api/login/register",
-        registrationData
-      );
+      const response = await axios.post(`${base_api}/login/register`, registrationData);
 
       toast.success(
         response.data.message || "Registration successful! Please login."
@@ -103,7 +98,7 @@ function Login() {
   useEffect(() => {
     const fetchGenders = async () => {
       try {
-        const response = await axios.get("http://localhost:7000/api/location/genders");
+        const response = await axios.get(`${base_api}/location/genders`);
         setGenders(response.data);
       } catch (error) {
         console.error("Failed to fetch genders:", error);

@@ -23,11 +23,12 @@ const PersonalInfoCard = ({
     states: [],
   });
   const containerRef = useRef(null);
+  const base_api = "http://localhost:7000/api";
 
   const fetchDropdowns = async () => {
     const [gen, count] = await Promise.all([
-      axios.get("http://localhost:7000/api/location/genders"),
-      axios.get("http://localhost:7000/api/location/countries"),
+      axios.get(`${base_api}/location/genders`),
+      axios.get(`${base_api}/location/countries`),
     ]);
     setDropdowns((prev) => ({
       ...prev,
@@ -42,10 +43,7 @@ const PersonalInfoCard = ({
       return;
     }
     try {
-      const res = await axios.post(
-        "http://localhost:7000/api/location/states",
-        { country_id: countryId }
-      );
+      const res = await axios.post(`${base_api}/states`, { country_id: countryId });
       setDropdowns((prev) => ({ ...prev, states: res.data }));
     } catch {
       setDropdowns((prev) => ({ ...prev, states: [] }));
@@ -101,7 +99,7 @@ const PersonalInfoCard = ({
   const handleSave = async () => {
     const token = localStorage.getItem("token");
     try {
-      await axios.put("http://localhost:7000/api/profile/update", {
+      await axios.put(`${base_api}/profile/update`, {
         ...formData,
         token,
       });

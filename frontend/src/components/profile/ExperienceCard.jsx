@@ -19,11 +19,12 @@ const ExperienceCard = ({
     designations: [],
   });
   const containerRef = useRef(null);
+  const base_api = "http://localhost:7000/api";
 
   const fetchDropdowns = async () => {
     const [compRes, desRes] = await Promise.all([
-      axios.get("http://localhost:7000/api/location/companies"),
-      axios.get("http://localhost:7000/api/location/designations"),
+      axios.get(`${base_api}/location/companies`),
+      axios.get(`${base_api}/location/designations`),
     ]);
     setDropdownData({ companies: compRes.data, designations: desRes.data });
   };
@@ -84,19 +85,13 @@ const ExperienceCard = ({
           let { company_id, designation_id } = exp;
           if (!company_id && exp.company_name) {
             try {
-              const res = await axios.post(
-                "http://localhost:7000/api/location/newcompanies",
-                { name: exp.company_name }
-              );
+              const res = await axios.post(`${base_api}/location/newcompanies`, { name: exp.company_name });
               company_id = res.data.companyId;
             } catch {}
           }
           if (!designation_id && exp.designation_name) {
             try {
-              const res = await axios.post(
-                "http://localhost:7000/api/location/newdesignations",
-                { name: exp.designation_name }
-              );
+              const res = await axios.post(`${base_api}/location/newdesignations`, { name: exp.designation_name });
               designation_id = res.data.designationId;
             } catch {}
           }
@@ -106,8 +101,8 @@ const ExperienceCard = ({
 
       for (const exp of preparedData) {
         const url = exp.id
-          ? "http://localhost:7000/api/profile/updateexperience"
-          : "http://localhost:7000/api/profile/newexperience";
+          ? `${base_api}/profile/updateexperience`
+          : `${base_api}/profile/newexperience`;
         const method = exp.id ? axios.put : axios.post;
         await method(
           url,

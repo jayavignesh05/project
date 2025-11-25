@@ -15,6 +15,7 @@ import ExperienceCard from "../components/profile/ExperienceCard";
 import EducationCard from "../components/profile/EducationCard";
 import SkillsCard from "../components/profile/SkillsCard";
 import dayjs from "dayjs";
+import Spinner from "../components/courses/Spinner";
 
 const ProfilePage = () => {
   const [profileData, setProfileData] = useState(null);
@@ -34,6 +35,7 @@ const ProfilePage = () => {
   const educationsContainerRef = useRef(null);
   const experiencesContainerRef = useRef(null);
   const addressesContainerRef = useRef(null);
+  const base_api = "http://localhost:7000/api";
 
   const fetchAllData = async () => {
     const token = localStorage.getItem("token");
@@ -45,9 +47,9 @@ const ProfilePage = () => {
 
     try {
       const [profileRes, expRes, eduRes] = await Promise.all([
-        axios.post("http://localhost:7000/api/profile/show", { token }),
-        axios.post("http://localhost:7000/api/profile/experience", { token }),
-        axios.post("http://localhost:7000/api/profile/geteducation", { token }),
+        axios.post(`${base_api}/profile/show`, { token }),
+        axios.post(`${base_api}/profile/experience`, { token }),
+        axios.post(`${base_api}/profile/geteducation`, { token }),
       ]);
 
       setProfileData(profileRes.data);
@@ -56,7 +58,7 @@ const ProfilePage = () => {
 
       try {
         const picRes = await axios.post(
-          "http://localhost:7000/api/profile/getProfilePic",
+          `${base_api}/profile/getProfilePic`,
           { token },
           { responseType: "blob" }
         );
@@ -79,7 +81,7 @@ const ProfilePage = () => {
     return dayjs(dateString).format("DD/MM/YYYY");
   };
 
-  if (loading) return <div className="loading-error-message">Loading...</div>;
+  if (loading) return <Spinner />;
   if (error) return <div className="loading-error-message error">{error}</div>;
   if (!profileData) return <div className="loading-error-message">No Data</div>;
 

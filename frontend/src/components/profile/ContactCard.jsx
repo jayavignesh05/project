@@ -1,31 +1,39 @@
 import React, { useState } from "react";
-import { MdOutlineEdit, MdCheck, MdClear, MdOutlineMailOutline } from "react-icons/md";
+import {
+  MdOutlineEdit,
+  MdCheck,
+  MdClear,
+  MdOutlineMailOutline,
+} from "react-icons/md";
 import { FiPhone } from "react-icons/fi";
 import { FaLinkedin } from "react-icons/fa";
 import axios from "axios";
 import { toast } from "react-toastify";
-import dayjs from "dayjs"; 
+import dayjs from "dayjs";
 
-const ContactCard = ({ profileData, onDataChange,onEditStart, onEditEnd }) => {
+const ContactCard = ({ profileData, onDataChange, onEditStart, onEditEnd }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
+  const base_api = "http://localhost:7000/api";
 
- const handleEditClick = () => {
+  const handleEditClick = () => {
     setFormData({
       email_id: profileData.email || "",
       contact_no: profileData.contact_no || "",
-      linkedin_url: profileData.linkedin_url || "", 
+      linkedin_url: profileData.linkedin_url || "",
+      bio: profileData.bio || "",
+
       first_name: profileData.first_name || "",
       last_name: profileData.last_name || "",
       gender_id: profileData.gender_id || "",
       current_status_id: profileData.current_status_id || "",
-      date_of_birth: profileData.date_of_birth 
-        ? dayjs(profileData.date_of_birth).format("YYYY-MM-DD") 
+      date_of_birth: profileData.date_of_birth
+        ? dayjs(profileData.date_of_birth).format("YYYY-MM-DD")
         : null,
-        
-      addresses: profileData.addresses || []
+
+      addresses: profileData.addresses || [],
     });
-    
+
     setIsEditing(true);
     if (onEditStart) onEditStart();
   };
@@ -44,19 +52,18 @@ const ContactCard = ({ profileData, onDataChange,onEditStart, onEditEnd }) => {
   const handleSave = async () => {
     const token = localStorage.getItem("token");
     try {
-      await axios.put("http://localhost:7000/api/profile/update", {
+      await axios.put(`${base_api}/profile/update`, {
         ...formData,
         token,
       });
       toast.success("Contact details updated!");
       setIsEditing(false);
       if (onDataChange) onDataChange();
-if (onEditEnd) onEditEnd();
+      if (onEditEnd) onEditEnd();
     } catch (err) {
       console.error("Update Error:", err.response?.data);
       toast.error("Failed to update contact.");
     }
-    
   };
 
   return (
@@ -95,10 +102,14 @@ if (onEditEnd) onEditEnd();
             />
           </div>
           <div className="header-actions">
-             <div className="edit-controls">
-                <button onClick={handleSave} className="save-btn"><MdCheck /></button>
-                <button onClick={handleCancel} className="cancel-btn"><MdClear /></button>
-             </div>
+            <div className="edit-controls">
+              <button onClick={handleSave} className="save-btn">
+                <MdCheck />
+              </button>
+              <button onClick={handleCancel} className="cancel-btn">
+                <MdClear />
+              </button>
+            </div>
           </div>
         </>
       ) : (
@@ -112,20 +123,26 @@ if (onEditEnd) onEditEnd();
             <span>{profileData.contact_no}</span>
           </div>
           {profileData.linkedin_url && (
-             <div className="contact-item">
-               <FaLinkedin />
-               <a 
-                 href={profileData.linkedin_url} 
-                 target="_blank" 
-                 rel="noopener noreferrer"
-                 style={{ textDecoration: "none", color: "inherit", wordBreak: "break-all" }}
-               >
-                 {profileData.linkedin_url}
-               </a>
-             </div>
+            <div className="contact-item">
+              <FaLinkedin />
+              <a
+                href={profileData.linkedin_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  textDecoration: "none",
+                  color: "inherit",
+                  wordBreak: "break-all",
+                }}
+              >
+                {profileData.linkedin_url}
+              </a>
+            </div>
           )}
           <div className="header-actions">
-            <button onClick={handleEditClick} className="edit-profile-btn"><MdOutlineEdit /></button>
+            <button onClick={handleEditClick} className="edit-profile-btn">
+              <MdOutlineEdit />
+            </button>
           </div>
         </>
       )}

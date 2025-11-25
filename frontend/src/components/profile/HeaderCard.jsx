@@ -8,12 +8,11 @@ const HeaderCard = ({ profileData, onDataChange, onEditStart, onEditEnd }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
   const [statuses, setStatuses] = useState([]);
+  const base_api = "http://localhost:7000/api";
 
   const fetchDropdowns = async () => {
     try {
-      const res = await axios.get(
-        "http://localhost:7000/api/location/currentstatus"
-      );
+      const res = await axios.get(`${base_api}/location/currentstatus`);
       setStatuses(res.data);
     } catch (e) {
       console.error(e);
@@ -27,7 +26,9 @@ const HeaderCard = ({ profileData, onDataChange, onEditStart, onEditEnd }) => {
       first_name: profileData.first_name,
       last_name: profileData.last_name,
       current_status_id: profileData.current_status_id,
-            linkedin_url: profileData.linkedin_url, 
+      bio: profileData.bio || "",
+      linkedin_url: profileData.linkedin_url,
+
 
       email_id: profileData.email,
       contact_no: profileData.contact_no,
@@ -45,7 +46,7 @@ const HeaderCard = ({ profileData, onDataChange, onEditStart, onEditEnd }) => {
   const handleSave = async () => {
     const token = localStorage.getItem("token");
     try {
-      await axios.put("http://localhost:7000/api/profile/update", {
+      await axios.put(`${base_api}/profile/update`, {
         ...formData,
         token,
       });
@@ -67,7 +68,6 @@ const HeaderCard = ({ profileData, onDataChange, onEditStart, onEditEnd }) => {
     setIsEditing(false);
     if (onEditEnd) onEditEnd();
   };
-
 
   return (
     <div className={`grid-card header-card ${isEditing ? "is-editing" : ""}`}>
@@ -109,6 +109,16 @@ const HeaderCard = ({ profileData, onDataChange, onEditStart, onEditEnd }) => {
               ))}
             </select>
           </div>
+          <div className="form-group">
+            <label>Bio</label>
+            <textarea
+              name="bio"
+              value={formData.bio || ""}
+              onChange={handleChange}
+              className="form-control"
+              rows="3"
+            ></textarea>
+          </div>
           <div className="header-actions">
             <div className="edit-controls">
               <button onClick={handleSave} className="save-btn">
@@ -122,10 +132,17 @@ const HeaderCard = ({ profileData, onDataChange, onEditStart, onEditEnd }) => {
         </>
       ) : (
         <>
-          <h2>
-            {profileData.first_name} {profileData.last_name}
-          </h2>
-          <p>{profileData.current_status_name || "N/A"}</p>
+          <div className="header-info">
+            <div className="name-status-line">
+              <h2>
+                {profileData.first_name} {profileData.last_name}
+              </h2>
+              <p className="current-status">
+                {profileData.current_status_name || "N/A"}
+              </p>
+            </div>
+            <p className="bio-text">{profileData.bio || "No bio available."}</p>
+          </div>
           <div className="header-actions">
             <button onClick={handleEditClick} className="edit-profile-btn">
               <MdOutlineEdit />

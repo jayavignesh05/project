@@ -1,0 +1,174 @@
+/* --- 1. Full Screen Overlay --- */
+.payment-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(15, 23, 42, 0.6); /* Softer dark overlay */
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(8px); /* Modern blur effect */
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* --- 2. The Modal Box --- */
+.payment-modal {
+  background-color: #ffffff;
+  width: 90%;
+  max-width: 400px; /* Slightly narrower for a focused look */
+  border-radius: 20px; /* Softer corners */
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  transform: scale(1);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); /* Smooth pop-up */
+}
+
+/* --- 3. Header --- */
+.payment-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 28px 10px; /* Top heavy padding */
+}
+
+.payment-modal-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+}
+
+.close-btn {
+  background: #f1f5f9;
+  border: none;
+  color: #64748b;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%; /* Circular button */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+  transform: rotate(90deg); /* Playful interaction */
+}
+
+/* --- 4. Body Content --- */
+.payment-modal-body {
+  padding: 10px 28px 28px;
+}
+
+.payment-modal-course {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.payment-modal-course strong {
+  color: #334155;
+  font-weight: 600;
+}
+
+/* --- 5. Amount Breakdown Box --- */
+.amount-breakdown {
+  background-color: #f8fafc; /* Very light grey */
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #f1f5f9;
+}
+
+.amount-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.amount-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #535353; /* Muted text */
+}
+
+.amount-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  font-family: 'Inter', sans-serif; /* Ensure numbers look good */
+}
+
+/* Total & Paid (Subtle) */
+.amount-value.total, .amount-value.paid {
+  color: #475569;
+}
+
+/* Divider Line */
+.divider-line {
+  height: 1px;
+  background-color: #e2e8f0;
+  margin: 12px 0;
+}
+
+/* Due Amount (Highlight) */
+.due-row .amount-label {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.due-row .amount-value.due {
+  font-size: 24px; /* Big and bold */
+  font-weight: 800;
+  color: #ef4444; /* Alert Red */
+  letter-spacing: -0.5px;
+}
+
+/* --- 6. Footer & Button --- */
+.payment-modal-footer {
+  padding: 0 28px 28px; /* No top padding to keep it close to content */
+}
+
+.pay-btn {
+  width: 100%; /* Full width button */
+  padding: 14px;
+  background-color: #852a9e; /* Dark Navy (Premium look) */
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.pay-btn:hover {
+  background-color: #581a69;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.pay-btn:active {
+  transform: translateY(0);
+}
+
+/* --- Animations --- */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}

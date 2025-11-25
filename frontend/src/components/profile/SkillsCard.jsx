@@ -9,16 +9,13 @@ const SkillsCard = ({ onDataChange, onEditStart, onEditEnd }) => {
   const [skills, setSkills] = useState([]);
   const [newSkill, setNewSkill] = useState("");
   const [loading, setLoading] = useState(false);
+  const base_api = "http://localhost:7000/api";
 
   const fetchSkills = async () => {
     const token = localStorage.getItem("token");
     if (!token) return;
     try {
-      const res = await axios.post(
-        "http://localhost:7000/api/profile/getskills",
-        {}, // Body empty object
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await axios.post(`${base_api}/profile/getskills`, { token });
       setSkills(res.data);
     } catch (err) {
       console.error("Failed to fetch skills");
@@ -58,11 +55,7 @@ const SkillsCard = ({ onDataChange, onEditStart, onEditEnd }) => {
     const token = localStorage.getItem("token");
     setLoading(true);
     try {
-      await axios.put(
-        "http://localhost:7000/api/profile/updateskills",
-        { skills }, // Sending skills directly in body
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await axios.put(`${base_api}/profile/updateskills`, { skills, token });
       toast.success("Skills updated!");
       setIsEditing(false);
       if (onDataChange) onDataChange();

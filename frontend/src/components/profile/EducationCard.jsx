@@ -14,11 +14,12 @@ const EducationCard = ({ educationData, onDataChange, onEditStart, onEditEnd }) 
     institutes: [],
   });
   const containerRef = useRef(null);
+  const base_api = "http://localhost:7000/api";
 
   const fetchDropdowns = async () => {
     const [degRes, instRes] = await Promise.all([
-      axios.get("http://localhost:7000/api/location/degrees"),
-      axios.get("http://localhost:7000/api/location/institutes"),
+      axios.get(`${base_api}/location/degrees`),
+      axios.get(`${base_api}/location/institutes`),
     ]);
     setDropdownData({ degrees: degRes.data, institutes: instRes.data });
   };
@@ -77,19 +78,13 @@ const EducationCard = ({ educationData, onDataChange, onEditStart, onEditEnd }) 
           let { degree_id, institute_id } = edu;
           if (!degree_id && edu.name) {
             try {
-              const res = await axios.post(
-                "http://localhost:7000/api/location/newdegrees",
-                { name: edu.name }
-              );
+              const res = await axios.post(`${base_api}/location/newdegrees`, { name: edu.name });
               degree_id = res.data.degreeId;
             } catch {}
           }
           if (!institute_id && edu.institute_name) {
             try {
-              const res = await axios.post(
-                "http://localhost:7000/api/location/newinstitutes",
-                { name: edu.institute_name }
-              );
+              const res = await axios.post(`${base_api}/location/newinstitutes`, { name: edu.institute_name });
               institute_id = res.data.instituteId;
             } catch {}
           }
@@ -103,14 +98,10 @@ const EducationCard = ({ educationData, onDataChange, onEditStart, onEditEnd }) 
         const config = { headers: { Authorization: `Bearer ${token}` } };
 
         if (edu.id)
-          await axios.put(
-            "http://localhost:7000/api/profile/updateeducation",
-            payload,
-            config
-          );
+          await axios.put(`${base_api}/profile/updateeducation`, payload, config);
         else
           await axios.post(
-            "http://localhost:7000/api/profile/neweducation",
+            `${base_api}/profile/neweducation`,
             { ...payload, institute_id: edu.institute_id },
             config
           );

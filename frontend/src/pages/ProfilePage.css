@@ -125,12 +125,19 @@
   font-size: 2.5rem;
 }
 
-.header-card p {
-  font-size: 1.2rem;
+.bio-text{
+  font-size: 1rem;
   color: #666;
   margin: 5px 0 0;
 }
 
+.current-status{
+  color: #000000 !important;
+  background-color: #e9ecef;
+  padding: 5px 10px;
+  border-radius: 20px;
+  margin: 0px;
+}
 .profile-summary-card h3,
 .experience-card h3 {
   margin-top: 0;
@@ -453,4 +460,9 @@
   border-radius: 50%;
   width: 16px;
   height: 16px;
+}
+.name-status-line {
+  display: flex;
+  align-items: center;
+  gap:20px;
 }

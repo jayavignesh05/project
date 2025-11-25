@@ -2,13 +2,15 @@ const express = require("express");
 const router = express.Router();
 const promisePool = require("../../db");
 const verifyToken = require("../middleware/verifyToken");
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
+
 const showProfile = async (req, res) => {
   const userId = req.userId;
   try {
     const sql = `
       SELECT 
-          u.id AS user_id, u.first_name, u.last_name, u.email_id, u.contact_no, u.date_of_birth, u.current_status_id, u.linkedin_url,
+          u.id AS user_id, u.first_name, u.last_name, u.email_id, u.contact_no, 
+          u.date_of_birth, u.current_status_id, u.linkedin_url,u.bio,
           a.id AS address_id, a.address, a.door_no, 
           a.street, a.area, a.city, a.pincode, a.countries_id, a.state_id,
           g.gender_name, g.id AS gender_id,
@@ -23,7 +25,8 @@ const showProfile = async (req, res) => {
       WHERE u.id = ?;
     `;
     const [results] = await promisePool.query(sql, [userId]);
-    if (results.length === 0) return res.status(404).json({ error: "User not found" });
+    if (results.length === 0)
+      return res.status(404).json({ error: "User not found" });
 
     const userProfile = {
       user_id: results[0].user_id,
@@ -32,6 +35,7 @@ const showProfile = async (req, res) => {
       email: results[0].email_id,
       contact_no: results[0].contact_no,
       linkedin_url: results[0].linkedin_url,
+      bio: results[0].bio,
       gender: results[0].gender_name,
       gender_id: results[0].gender_id,
       date_of_birth: results[0].date_of_birth,
@@ -71,6 +75,7 @@ const updateProfile = async (req, res) => {
     email_id,
     contact_no,
     linkedin_url,
+    bio,
     gender_id,
     date_of_birth,
     current_status_id,
@@ -84,16 +89,17 @@ const updateProfile = async (req, res) => {
 
     const userUpdateSql = `
         UPDATE users 
-        SET first_name = ?, last_name = ?, email_id = ?, contact_no = ?, linkedin_url = ?, gender_id = ?, date_of_birth = ?, current_status_id = ?
+        SET first_name = ?, last_name = ?, email_id = ?, contact_no = ?, linkedin_url = ?,bio = ?, gender_id = ?, date_of_birth = ?, current_status_id = ?
         WHERE id = ?;
     `;
-    
+
     await connection.query(userUpdateSql, [
       first_name,
       last_name,
       email_id,
       contact_no,
       linkedin_url || null,
+      bio || null,
       gender_id || null,
       date_of_birth || null,
       current_status_id || null,
@@ -141,11 +147,15 @@ const updateProfile = async (req, res) => {
     }
 
     await connection.commit();
-    res.status(200).json({ message: "Profile and addresses updated successfully." });
+    res
+      .status(200)
+      .json({ message: "Profile and addresses updated successfully." });
   } catch (error) {
     await connection.rollback();
     console.error("Update Profile Error:", error);
-    res.status(500).json({ error: "Database query failed during profile update." });
+    res
+      .status(500)
+      .json({ error: "Database query failed during profile update." });
   } finally {
     connection.release();
   }
@@ -158,6 +168,7 @@ const insertProfile = async (req, res) => {
     email_id,
     contact_no,
     linkedin_url,
+    bio,
     gender_id,
     date_of_birth,
     current_status_id,
@@ -166,7 +177,9 @@ const insertProfile = async (req, res) => {
   } = req.body;
 
   if (!first_name || !last_name || !email_id || !password || !contact_no) {
-    return res.status(400).json({ message: "Required user fields are missing." });
+    return res
+      .status(400)
+      .json({ message: "Required user fields are missing." });
   }
 
   const connection = await promisePool.getConnection();
@@ -176,16 +189,17 @@ const insertProfile = async (req, res) => {
 
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
-    
+
     const userInsertSql =
-      "INSERT INTO users (first_name, last_name, email_id, contact_no, linkedin_url, gender_id, date_of_birth, current_status_id, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    
+      "INSERT INTO users (first_name, last_name, email_id, contact_no, linkedin_url, bio, gender_id, date_of_birth, current_status_id, password) VALUES (?, ?, ?, ?, ?,?, ?, ?, ?, ?)";
+
     const [userResult] = await connection.query(userInsertSql, [
       first_name,
       last_name,
       email_id,
       contact_no,
       linkedin_url || null,
+      bio || null,
       gender_id || null,
       date_of_birth || null,
       current_status_id || null,
@@ -214,11 +228,15 @@ const insertProfile = async (req, res) => {
     }
 
     await connection.commit();
-    res.status(201).json({ message: "Profile created successfully.", userId: newUserId });
+    res
+      .status(201)
+      .json({ message: "Profile created successfully.", userId: newUserId });
   } catch (error) {
     await connection.rollback();
     console.error("Profile insert transaction error:", error);
-    res.status(500).json({ error: "Database query failed during profile creation." });
+    res
+      .status(500)
+      .json({ error: "Database query failed during profile creation." });
   } finally {
     connection.release();
   }
@@ -327,9 +345,10 @@ const updateEducation = async (req, res) => {
       .json({ message: "Education details updated successfully." });
   } catch (error) {
     console.error("Error updating education:", error);
-    res
-      .status(500)
-      .json({ error: "Database query failed during education update.", details: error.message });
+    res.status(500).json({
+      error: "Database query failed during education update.",
+      details: error.message,
+    });
   }
 };
 
@@ -403,13 +422,22 @@ const insertExperience = async (req, res) => {
       experienceId: result.insertId,
     });
   } catch (error) {
-    res.status(500).json({ error: "Database query failed", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Database query failed", details: error.message });
   }
 };
 
 const updateExperience = async (req, res) => {
   const userId = req.userId;
-  const { id, company_id, designation_id, joining_date, relieving_date, company_location } = req.body;
+  const {
+    id,
+    company_id,
+    designation_id,
+    joining_date,
+    relieving_date,
+    company_location,
+  } = req.body;
 
   if (!id || !company_id || !designation_id || !joining_date) {
     return res
@@ -427,7 +455,9 @@ const updateExperience = async (req, res) => {
       company_id,
       designation_id,
       new Date(joining_date).toISOString().slice(0, 10),
-      relieving_date ? new Date(relieving_date).toISOString().slice(0, 10) : null,
+      relieving_date
+        ? new Date(relieving_date).toISOString().slice(0, 10)
+        : null,
       company_location,
       id,
       userId,
@@ -449,7 +479,7 @@ const addProfilePic = async (req, res) => {
 
     if (!token) return res.status(401).json({ error: "Token is required" });
 
-    jwt.verify(token, 'ZXERE235SSF', async (err, decoded) => {
+    jwt.verify(token, "ZXERE235SSF", async (err, decoded) => {
       if (err) {
         return res.status(403).json({ error: "Invalid or expired token" });
       }
@@ -465,13 +495,13 @@ const addProfilePic = async (req, res) => {
       const buffer = Buffer.from(file_data, "base64");
 
       await promisePool.query(
-          `INSERT INTO user_profile_pics (user_id, mimetype, profile_pic)
+        `INSERT INTO user_profile_pics (user_id, mimetype, profile_pic)
            VALUES (?, ?, ?)
            ON DUPLICATE KEY UPDATE
              mimetype = VALUES(mimetype),
              profile_pic = VALUES(profile_pic)`,
-          [user_id, mime_type, buffer]
-        );
+        [user_id, mime_type, buffer]
+      );
 
       res.json({ message: "Profile picture updated successfully!" });
     });
@@ -488,16 +518,20 @@ const getProfilePic = async (req, res) => {
 
     if (!token) return res.status(401).json({ error: "Token is required" });
 
-    jwt.verify(token, 'ZXERE235SSF', async (err, decoded) => {
+    jwt.verify(token, "ZXERE235SSF", async (err, decoded) => {
       if (err) {
         return res.status(403).json({ error: "Invalid or expired token" });
       }
 
       const user_id = decoded.id;
 
-      const [rows] = await promisePool.query("SELECT profile_pic, mimetype FROM user_profile_pics WHERE user_id = ?", [user_id]);
+      const [rows] = await promisePool.query(
+        "SELECT profile_pic, mimetype FROM user_profile_pics WHERE user_id = ?",
+        [user_id]
+      );
 
-      if (rows.length === 0) return res.status(404).json({ error: "No image found" });
+      if (rows.length === 0)
+        return res.status(404).json({ error: "No image found" });
 
       res.set("Content-Type", rows[0].mimetype);
       res.send(rows[0].profile_pic);
@@ -521,9 +555,9 @@ const getUserSkills = async (req, res) => {
       WHERE us.user_id = ?
     `;
     const [results] = await promisePool.query(sql, [userId]);
-    
+
     // நாம் பெயர்களை மட்டும் Array-ஆக அனுப்புகிறோம் (['React', 'Java'])
-    const skillsList = results.map(row => row.name);
+    const skillsList = results.map((row) => row.name);
     res.status(200).json(skillsList);
   } catch (error) {
     console.error(error);
@@ -545,25 +579,36 @@ const updateUserSkills = async (req, res) => {
     await connection.beginTransaction();
 
     // 1. பழைய Skills-ஐ அழிக்கிறோம் (Delete old mappings for this user)
-    await connection.query("DELETE FROM user_skills WHERE user_id = ?", [userId]);
+    await connection.query("DELETE FROM user_skills WHERE user_id = ?", [
+      userId,
+    ]);
 
     // 2. ஒவ்வொரு Skill-ஐயும் செக் செய்கிறோம்
     for (const skillName of skills) {
       let skillId;
-      
+
       // Skill ஏற்கனவே இருக்கிறதா?
-      const [existing] = await connection.query("SELECT id FROM skills WHERE name = ?", [skillName]);
-      
+      const [existing] = await connection.query(
+        "SELECT id FROM skills WHERE name = ?",
+        [skillName]
+      );
+
       if (existing.length > 0) {
         skillId = existing[0].id;
       } else {
         // இல்லை என்றால் புதுசாக உருவாக்குகிறோம்
-        const [inserted] = await connection.query("INSERT INTO skills (name) VALUES (?)", [skillName]);
+        const [inserted] = await connection.query(
+          "INSERT INTO skills (name) VALUES (?)",
+          [skillName]
+        );
         skillId = inserted.insertId;
       }
 
       // 3. User உடன் Connect செய்கிறோம்
-      await connection.query("INSERT INTO user_skills (user_id, skill_id) VALUES (?, ?)", [userId, skillId]);
+      await connection.query(
+        "INSERT INTO user_skills (user_id, skill_id) VALUES (?, ?)",
+        [userId, skillId]
+      );
     }
 
     await connection.commit();

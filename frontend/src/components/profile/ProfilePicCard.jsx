@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 
 const ProfilePicCard = ({ profilePic, setProfilePic, defaultImage }) => {
   const fileInputRef = useRef(null);
+  const base_api = "http://localhost:7000/api";
 
   const handleProfilePicEditClick = () => {
     fileInputRef.current.click();
@@ -21,14 +22,11 @@ const ProfilePicCard = ({ profilePic, setProfilePic, defaultImage }) => {
       const token = localStorage.getItem("token");
 
       try {
-        const response = await axios.post(
-          "http://localhost:7000/api/profile/addProfilePic",
-          {
-            token,
-            mime_type: file.type,
-            file_data: base64Data,
-          }
-        );
+        const response = await axios.post(`${base_api}/profile/addProfilePic`, {
+          token,
+          mime_type: file.type,
+          file_data: base64Data,
+        });
 
         toast.success(response.data.message);
         const imageUrl = URL.createObjectURL(file);
