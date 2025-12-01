@@ -19,7 +19,7 @@ const ExperienceCard = ({
     designations: [],
   });
   const containerRef = useRef(null);
-  const base_api = "http://localhost:7000/api";
+  const base_api = "http://localhost:4000/api";
 
   const fetchDropdowns = async () => {
     const [compRes, desRes] = await Promise.all([

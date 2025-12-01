@@ -13,7 +13,7 @@ const FeedbackPlay = ({ courseId, onBack }) => {
   // NEW: State to track current question index
   const [currentQIndex, setCurrentQIndex] = useState(0);
 
-  const base_api = "http://localhost:7000/api";
+  const base_api = "http://localhost:4000/api";
 
   useEffect(() => {
     axios.get(`${base_api}/courses/feedback-questions/${courseId}`)

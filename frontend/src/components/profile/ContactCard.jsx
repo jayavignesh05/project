@@ -14,7 +14,7 @@ import dayjs from "dayjs";
 const ContactCard = ({ profileData, onDataChange, onEditStart, onEditEnd }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
-  const base_api = "http://localhost:7000/api";
+  const base_api = "http://localhost:4000/api";
 
   const handleEditClick = () => {
     setFormData({
