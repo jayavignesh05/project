@@ -21,7 +21,7 @@ function Login() {
 
   const navigate = useNavigate();
   // Ensure this is your correct backend URL (e.g. Cloudflare link)
-  const base_api = "http://localhost:4000/api";
+  const base_api = "https://student-leaning.onrender.com/api";
 
   // Reset fields when switching tabs
   const handleTabChange = (tab) => {

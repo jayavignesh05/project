@@ -13,7 +13,7 @@ const QuizPlay = ({ courseId, onBack }) => {
   // NEW: State to track the current question number (0, 1, 2...)
   const [currentQIndex, setCurrentQIndex] = useState(0);
 
-  const base_api = "http://localhost:4000/api";
+  const base_api = "https://student-leaning.onrender.com/api";
 
   useEffect(() => {
     axios.get(`${base_api}/courses/quiz-questions/${courseId}`)

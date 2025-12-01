@@ -9,7 +9,7 @@ const SkillsCard = ({ onDataChange, onEditStart, onEditEnd }) => {
   const [skills, setSkills] = useState([]);
   const [newSkill, setNewSkill] = useState("");
   const [loading, setLoading] = useState(false);
-  const base_api = "http://localhost:4000/api";
+  const base_api = "https://student-leaning.onrender.com/api";
 
   const fetchSkills = async () => {
     const token = localStorage.getItem("token");

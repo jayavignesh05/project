@@ -11,7 +11,7 @@ const Cards = () => {
   const [filter, setFilter] = useState("all");
   const [error, setError] = useState(null);
 
-  const base_api = "http://localhost:4000/api";
+  const base_api = "https://student-leaning.onrender.com/api";
 
   const token = localStorage.getItem("token");
 

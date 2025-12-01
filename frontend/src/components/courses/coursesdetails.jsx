@@ -26,7 +26,7 @@ const CourseDetail = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(null);
 
-  const base_api = "http://localhost:4000/api";
+  const base_api = "https://student-leaning.onrender.com/api";
   const token = localStorage.getItem("token");
   const studentName = localStorage.getItem("userName") || "Student";
 

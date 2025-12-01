@@ -34,7 +34,7 @@ const ProfilePage = () => {
   const educationsContainerRef = useRef(null);
   const experiencesContainerRef = useRef(null);
   const addressesContainerRef = useRef(null);
-  const base_api = "http://localhost:4000/api";
+  const base_api = "https://student-leaning.onrender.com/api";
 
   const fetchAllData = async () => {
     const token = localStorage.getItem("token");

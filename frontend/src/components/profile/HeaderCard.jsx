@@ -8,7 +8,7 @@ const HeaderCard = ({ profileData, onDataChange, onEditStart, onEditEnd }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
   const [statuses, setStatuses] = useState([]);
-  const base_api = "http://localhost:4000/api";
+  const base_api = "https://student-leaning.onrender.com/api";
 
   const fetchDropdowns = async () => {
     try {

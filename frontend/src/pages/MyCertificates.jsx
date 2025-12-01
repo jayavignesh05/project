@@ -9,7 +9,7 @@ const MyCertificates = () => {
   const [certificates, setCertificates] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const base_api = "http://localhost:4000/api";
+  const base_api = "https://student-leaning.onrender.com/api";
   const token = localStorage.getItem("token");
 
   const studentName = localStorage.getItem("userName") || "Student";

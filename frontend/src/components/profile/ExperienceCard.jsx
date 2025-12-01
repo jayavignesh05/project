@@ -19,7 +19,7 @@ const ExperienceCard = ({
     designations: [],
   });
   const containerRef = useRef(null);
-  const base_api = "http://localhost:4000/api";
+  const base_api = "https://student-leaning.onrender.com/api";
 
   const fetchDropdowns = async () => {
     const [compRes, desRes] = await Promise.all([

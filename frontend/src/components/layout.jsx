@@ -21,7 +21,7 @@ export default function Layout() {
 
       try {
         const picRes = await axios.post(
-          `http://localhost:4000/api/profile/getProfilePic`,
+          `https://student-leaning.onrender.com/api/profile/getProfilePic`,
           { token },
           { responseType: "blob" }
         );

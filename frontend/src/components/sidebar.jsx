@@ -22,7 +22,7 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar }) {
     const fetchSidebarData = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:4000/api/side/sidebar"
+          "https://student-leaning.onrender.com/api/side/sidebar"
         );
         // Add the new "Test" item to the list from the API
         const updatedNavItems = [

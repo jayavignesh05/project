@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 
 const ProfilePicCard = ({ profilePic, setProfilePic, defaultImage }) => {
   const fileInputRef = useRef(null);
-  const base_api = "http://localhost:4000/api";
+  const base_api = "https://student-leaning.onrender.com/api";
 
   const handleProfilePicEditClick = () => {
     fileInputRef.current.click();
